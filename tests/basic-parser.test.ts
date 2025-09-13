@@ -1,5 +1,6 @@
 import { parseCSV } from "../src/basic-parser";
 import * as path from "path";
+import { z } from "zod";
 
 const PEOPLE_CSV_PATH = path.join(__dirname, "../data/people.csv");
 const EMPTY_CSV_PATH = path.join(__dirname, "../data/empty.csv");
@@ -111,4 +112,30 @@ test("parseCSV works with diff language", async () => {
   expect(results[8]).toEqual(["가비", "29"]);
   expect(results[9]).toEqual(["행크", "50"]);
   expect(results[10]).toEqual(["이안", "21"]);
+});
+
+test("parseCSV works with zod schema", async () => {
+  const schema = z.tuple([z.string(), z.coerce.number(), z.string()])
+    .transform(t => ({ name: t[0], age: t[1], isStudent: t[2] }));
+
+  const result = await parseCSV(
+    path.join(__dirname, "../data/zod_test.csv"),
+    schema
+  );
+
+  expect(result[0]).toEqual({ name: "Alice", age: 20, isStudent: "Yes" });
+  expect(result[1]).toEqual({ name: "Bob", age: 30, isStudent: "No" });
+});
+
+test("parseCSV works with returning error for zod schema", async () => {
+  const schema = z.tuple([z.string(), z.coerce.number(), z.string()])
+    .transform(t => ({ name: t[0], age: t[1], isStudent: t[2] }));
+
+  const result = await parseCSV(
+    path.join(__dirname, "../data/zod_test_return_error.csv"),
+    schema
+  );
+
+  expect(result[0]).toEqual({ name: "Alice", age: 20, isStudent: "Yes" });
+  expect(result[1]).toHaveProperty("error");
 });

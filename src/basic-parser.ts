@@ -1,5 +1,21 @@
 import * as fs from "fs";
 import * as readline from "readline";
+import { z } from "zod";
+
+export class SchemaError extends Error {
+  rowIndex: number;
+  rawStr: string[];
+  issue: z.ZodIssue[];
+
+  constructor(rowIndex: number, rawStr: string[], issue: z.ZodIssue[]) {
+    super(`Schema error at row ${rowIndex + 1}`);
+    this.name = "SchemaError";
+    this.rowIndex = rowIndex;
+    this.rawStr = rawStr;
+    this.issue = issue;
+  }
+}
+
 
 /**
  * This is a JSDoc comment. Similar to JavaDoc, it documents a public-facing
@@ -14,7 +30,8 @@ import * as readline from "readline";
  * @param path The path to the file being loaded.
  * @returns a "promise" to produce a 2-d array of cell values
  */
-export async function parseCSV(path: string): Promise<string[][]> {
+
+export async function parseCSV<T>(path: string, schema?: z.ZodType<T>): Promise<T[] | string[][]> {
   // This initial block of code reads from a file in Node.js. The "rl"
   // value can be iterated over in a "for" loop. 
   const fileStream = fs.createReadStream(path);
@@ -23,15 +40,31 @@ export async function parseCSV(path: string): Promise<string[][]> {
     crlfDelay: Infinity, // handle different line endings
   });
   
-  // Create an empty array to hold the results
-  let result = []
-  
+  let rowIndex = 0;
+
   // We add the "await" here because file I/O is asynchronous. 
   // We need to force TypeScript to _wait_ for a row before moving on. 
   // More on this in class soon!
+  if (!schema) {
+    const result: string[][] = [];
+    for await (const line of rl) {
+      result.push(line.split(",").map((v) => v.trim()));
+    }
+    return result;
+  }
+
+  const result: Array<T | { error: SchemaError }> = [];
   for await (const line of rl) {
     const values = line.split(",").map((v) => v.trim());
-    result.push(values)
+    const parsedValues = schema.safeParse(values);
+
+    if (parsedValues.success) {
+      result.push(parsedValues.data);
+    } else {
+      result.push({ error: new SchemaError(rowIndex, values, parsedValues.error.issues) });
+    }
+    rowIndex = rowIndex + 1;
   }
-  return result
+
+  return result as T[];
 }
