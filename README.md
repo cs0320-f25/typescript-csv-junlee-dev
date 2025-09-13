@@ -9,6 +9,7 @@ Potential issues through my POV:
 2. Consistent column counts: fail fast (with row/column diagnostics) when a row’s number of fields differs from the first row or the schema’s expectation
 3. Header row handling: optional hasHeader: boolean | "auto" and name-based access (map columns by header names)
 4. Options & inputs: accept strings/streams in addition to file paths as well as options object for delimiter, quote, escape, trimming, empty-line behavior
+5. Extensibility: have the caller specify what kind of object it wants returned. 
 
 - #### Step 2: Use an LLM to help expand your perspective.
 
@@ -16,6 +17,8 @@ Prompt A (pretty broad): “I’m working on a TypeScript CSV parser used by oth
 Prompt B (more edge‑case heavy): “List CSV pitfalls beyond naive "line.split(',')": quoting, escaped quotes, CRLF vs LF, BOM, trailing commas, empty lines, whitespace, etc.”
 
 Both prompts agree on moving beyond naive split(','), handling quoting/newlines, and exposing configurable options. Prompt A emphasized higher-level architecture-streaming/async iteration along with an options object while Prompt B listed specific correctness pitfalls (UTF-8 BOM, CRLF vs LF, trailing commas as empty cells, etc.) directly translatable into tests. In conclusion: implement B’s safeguards first for reliability and then layer A’s scalability and developer-experience features.
+
+Overall, the LLM has pretty consistent suggestions, but the edge-cases it considers is more detailed. For example, I wasn't thinking of things like UTF-8 BOM. I think it missed an important aspect of extensibility. Right now, the parser just returns an array of array of strings.
 
 - #### Step 3: use an LLM to help expand your perspective.
 1.
